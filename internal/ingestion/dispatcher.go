@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"docmind/internal/config"
+	"docmind/internal/ingestion/parsers"
 )
 
 // Ingest routes a file event to the correct parser based on its extension.
-// This is the IngestFn passed to watcher.Start().
 func Ingest(path string, action string) {
 	if action == "DELETE" {
 		handleDelete(path)
@@ -22,8 +22,23 @@ func Ingest(path string, action string) {
 		return
 	}
 
-	// Parser lookup and downstream pipeline added in Layers 2, 3, 4.
-	log.Printf("[INGEST] dispatching %s as %s", filepath.Base(path), parserKey)
+	parser, err := parsers.Get(parserKey)
+	if err != nil {
+		log.Printf("[INGEST] unknown parser %s: %v", parserKey, err)
+		return
+	}
+
+	docs, err := parser.Parse(path)
+	if err != nil {
+		log.Printf("[INGEST] parse failed %s: %v", filepath.Base(path), err)
+		return
+	}
+
+	log.Printf("[INGEST] parsed %d docs from %s", len(docs), filepath.Base(path))
+
+	// Downstream: chunker → embedder → vector store
+	// Implemented in Layer 3.
+	_ = docs
 }
 
 func handleDelete(path string) {
