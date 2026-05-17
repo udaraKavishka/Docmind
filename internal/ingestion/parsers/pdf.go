@@ -31,7 +31,8 @@ func (p *PDFParser) Parse(path string) ([]ParsedDoc, error) {
 			continue
 		}
 
-		text := strings.TrimSpace(pg.Content().Text())
+		text, _ := pg.GetPlainText(nil)
+		text = strings.TrimSpace(text)
 
 		if len(text) >= config.MinTextChars {
 			lang, _ := ocr.DetectLanguage(text[:min(500, len(text))])
@@ -101,11 +102,4 @@ func renderAndOCR(pdfPath string, pageNum int) (text, language string, err error
 		return "", "", fmt.Errorf("read rendered page: %w", err)
 	}
 	return ocr.OCRBytes(imgBytes, "sin+tam+eng")
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
