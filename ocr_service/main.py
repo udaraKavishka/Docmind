@@ -64,3 +64,23 @@ def detect_lang_endpoint(req: LangRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+def check_dpi(pil_img: Image.Image) -> int:
+    dpi = pil_img.info.get("dpi", (72, 72))
+    return int(dpi[0])
+
+
+
+def preprocess_aggressive(pil_img: Image.Image) -> np.ndarray:
+    img = np.array(pil_img.convert("RGB"))
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    h, w = gray.shape
+    if w < 1000:
+        gray = cv2.resize(gray, (w * 2, h * 2), interpolation=cv2.INTER_CUBIC)
+    thresh = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2
+    )
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    return cv2.fastNlMeansDenoising(closed, h=7)
