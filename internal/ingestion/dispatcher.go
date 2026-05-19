@@ -5,11 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"docmind/internal/chunker"
 	"docmind/internal/config"
 	"docmind/internal/ingestion/parsers"
+	"docmind/internal/vectorstore"
 )
 
-// Ingest routes a file event to the correct parser based on its extension.
+// Ingest routes a file event to the correct parser, chunks, embeds, and stores the result.
 func Ingest(path string, action string) {
 	if action == "DELETE" {
 		handleDelete(path)
@@ -34,14 +36,29 @@ func Ingest(path string, action string) {
 		return
 	}
 
-	log.Printf("[INGEST] parsed %d docs from %s", len(docs), filepath.Base(path))
+	var allChunks []chunker.Chunk
+	for _, doc := range docs {
+		allChunks = append(allChunks, chunker.ChunkDocument(doc)...)
+	}
 
-	// Downstream: chunker → embedder → vector store
-	// Implemented in Layer 3.
-	_ = docs
+	if err := vectorstore.UpsertChunks(allChunks); err != nil {
+		log.Printf("[INGEST] upsert failed %s: %v", filepath.Base(path), err)
+		return
+	}
+
+	childCount := 0
+	for _, c := range allChunks {
+		if c.ChunkType == "child" {
+			childCount++
+		}
+	}
+	log.Printf("[INGEST] indexed %s: %d child chunks", filepath.Base(path), childCount)
+
+	// BM25 rebuild added in Layer 4.
 }
 
 func handleDelete(path string) {
-	// Wired to ChromaDB delete in Layer 4.
-	log.Printf("[INGEST] DELETE queued for %s", filepath.Base(path))
+	if err := vectorstore.DeleteBySource(path); err != nil {
+		log.Printf("[INGEST] delete failed %s: %v", filepath.Base(path), err)
+	}
 }
