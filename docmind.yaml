@@ -1,0 +1,33 @@
+session_name: docmind
+start_directory: /home/udara/Documents/Personal_GITHUB/Local OCR RAG
+
+windows:
+  # ── OCR microservice (must start before the Go watcher and Streamlit) ──
+  - window_name: ocr-service
+    panes:
+      - shell_command:
+          - uvicorn ocr_service.main:app --port 8765 --reload
+
+  # ── Go file watcher (ingestion trigger for non-Streamlit use) ──
+  - window_name: go-watcher
+    panes:
+      - shell_command:
+          - go run ./cmd/docmind/
+
+  # ── Streamlit frontend (main app, includes Python watcher thread) ──
+  - window_name: streamlit
+    panes:
+      - shell_command:
+          - streamlit run app/main.py --server.port 8501
+
+  # ── Ollama LLM server ──
+  - window_name: ollama
+    panes:
+      - shell_command:
+          - OLLAMA_KEEP_ALIVE=-1 ollama serve
+
+  # ── Shell for ad-hoc tasks (re-index, debug, etc.) ──
+  - window_name: shell
+    panes:
+      - shell_command:
+          -
