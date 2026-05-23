@@ -18,7 +18,7 @@ func TestDebouncerFiresOnce(t *testing.T) {
 	})
 
 	// Fire 5 rapid schedules on the same path — only the last should survive.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		d.schedule(path, "CREATE")
 		time.Sleep(5 * time.Millisecond)
 	}
