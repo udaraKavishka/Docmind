@@ -35,8 +35,10 @@ for k, v in _defaults.items():
         st.session_state[k] = v
 
 
-def _start_watcher_thread(watch_path: str) -> None:
+def _start_watcher_thread(watch_path: str | None) -> None:
     """Spawn a daemon watcher thread for *watch_path*."""
+    if not watch_path:
+        return
     import config as c
     c.WATCHED_DIR = Path(watch_path)
     c.WATCHED_DIR.mkdir(parents=True, exist_ok=True)
@@ -69,8 +71,8 @@ with st.sidebar:
         label_visibility='collapsed',
         help='Drop documents here. Change path to index a different folder.',
     )
-    if _new_dir != st.session_state.watched_dir:
-        _p = Path(_new_dir).expanduser().resolve()
+    if _new_dir and _new_dir != st.session_state.watched_dir:
+        _p = Path(str(_new_dir)).expanduser().resolve()
         if _p.exists() and _p.is_dir():
             st.session_state.watched_dir = str(_p)
             st.rerun()
