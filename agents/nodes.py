@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import requests
@@ -5,6 +7,7 @@ from config import OLLAMA_BASE_URL, PRIMARY_LLM, FALLBACK_LLM
 from config import THINK_PREFIX, NO_THINK_PREFIX
 from retrieval.retriever import retrieve
 from retrieval.reranker  import rerank
+from agents.state import AgentState
 
 log      = logging.getLogger(__name__)
 CHAT_URL = f'{OLLAMA_BASE_URL}/api/chat'
@@ -53,7 +56,7 @@ Output format: JSON array of strings. Example: ["What is X?", "How does Y affect
 Never add sub-questions that are not needed. Fewer is better."""
 
 
-def planner_node(state: dict) -> dict:
+def planner_node(state: AgentState) -> dict:
     """
     Decompose the user query into sub-questions.
     Uses gemma3:4b with /no_think for fast, structured JSON output.
@@ -78,7 +81,7 @@ def planner_node(state: dict) -> dict:
 
 # ── RETRIEVER NODE ──────────────────────────────────────────────────────────
 
-def retriever_node(state: dict) -> dict:
+def retriever_node(state: AgentState) -> dict:
     """
     Run the full retrieval pipeline for each sub-question.
     Deduplicates by chunk_id across all sub-questions.
@@ -120,7 +123,7 @@ Rules:
 5. Keep answers concise — prefer bullet points for multi-part answers."""
 
 
-def generator_node(state: dict) -> dict:
+def generator_node(state: AgentState) -> dict:
     """
     Synthesise a cited answer from retrieved chunks.
     Uses qwen3:8b with /think for deep reasoning on complex questions.
@@ -170,7 +173,7 @@ Output ONLY valid JSON (no other text):
 Be strict: if ANY factual claim in the answer is not traceable to a context chunk, set grounded to false."""
 
 
-def critic_node(state: dict) -> dict:
+def critic_node(state: AgentState) -> dict:
     """
     Check whether the generated answer is grounded in the retrieved context.
     Uses gemma3:4b with /no_think for fast structured JSON output.
