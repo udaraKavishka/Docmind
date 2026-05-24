@@ -16,7 +16,7 @@ def parse(path: Path) -> list[dict]:
     Returns a single ParsedDoc dict containing all paragraphs and tables.
     """
     try:
-        from docx import Document
+        from docx import Document  # type: ignore[import-untyped]
 
         doc   = Document(str(path))
         parts: list[str] = []

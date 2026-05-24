@@ -21,7 +21,7 @@ def parse(path: Path) -> list[dict]:
     """
     docs: list[dict] = []
     try:
-        import pdfplumber
+        import pdfplumber  # type: ignore[import-untyped]
         with pdfplumber.open(str(path)) as pdf:
             # Detect overall language from the first digital page
             sample_text = ''

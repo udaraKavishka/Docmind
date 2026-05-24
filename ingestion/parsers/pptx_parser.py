@@ -15,7 +15,7 @@ def parse(path: Path) -> list[dict]:
     """
     docs: list[dict] = []
     try:
-        from pptx import Presentation
+        from pptx import Presentation  # type: ignore[import-untyped]
 
         prs = Presentation(str(path))
         for i, slide in enumerate(prs.slides, 1):
@@ -24,14 +24,20 @@ def parse(path: Path) -> list[dict]:
             # All text frames on the slide
             for shape in slide.shapes:
                 if shape.has_text_frame:
-                    for para in shape.text_frame.paragraphs:
-                        line = ' '.join(run.text for run in para.runs).strip()
-                        if line:
-                            parts.append(line)
+                    from pptx.shapes.base import BaseShape  # type: ignore[import-untyped]
+                    from pptx.util import Emu  # type: ignore[import-untyped]
+                    tf = getattr(shape, 'text_frame', None)
+                    if tf is not None:
+                        for para in tf.paragraphs:
+                            line = ' '.join(run.text for run in para.runs).strip()
+                            if line:
+                                parts.append(line)
 
             # Speaker notes
             if slide.has_notes_slide:
-                notes = slide.notes_slide.notes_text_frame.text.strip()
+                notes_slide = slide.notes_slide
+                ntf = getattr(notes_slide, 'notes_text_frame', None)
+                notes = ntf.text.strip() if ntf is not None else ''
                 if notes:
                     parts.append(f'[Notes] {notes}')
 
