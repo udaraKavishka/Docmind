@@ -1,0 +1,12 @@
+{
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Linux",
+  "venvPath": "/home/udara/miniconda3",
+  "venv": ".",
+  "typeCheckingMode": "basic",
+  "reportMissingModuleSource": "none",
+  "ignore": [
+    "internal/agent",
+    "internal/retrieval"
+  ]
+}
