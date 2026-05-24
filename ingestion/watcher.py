@@ -45,22 +45,25 @@ class _DebounceHandler(FileSystemEventHandler):
 
     def on_created(self, event) -> None:
         if not event.is_directory:
-            log.debug(f'Watcher CREATE: {event.src_path}')
-            self._debounce(event.src_path, 'CREATE')
+            path = str(event.src_path)
+            log.debug(f'Watcher CREATE: {path}')
+            self._debounce(path, 'CREATE')
 
     def on_modified(self, event) -> None:
         if not event.is_directory:
-            log.debug(f'Watcher MODIFY: {event.src_path}')
-            self._debounce(event.src_path, 'MODIFY')
+            path = str(event.src_path)
+            log.debug(f'Watcher MODIFY: {path}')
+            self._debounce(path, 'MODIFY')
 
     def on_deleted(self, event) -> None:
         if not event.is_directory:
-            log.info(f'Watcher DELETE: {event.src_path}')
+            path = str(event.src_path)
+            log.info(f'Watcher DELETE: {path}')
             # Deletions are fired immediately (file is already gone)
             try:
-                self._callback(Path(event.src_path), 'DELETE')
+                self._callback(Path(path), 'DELETE')
             except Exception as e:
-                log.error(f'Delete callback error {event.src_path}: {e}')
+                log.error(f'Delete callback error {path}: {e}')
 
 
 def start_watcher(callback) -> None:
