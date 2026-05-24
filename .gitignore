@@ -1,0 +1,56 @@
+# ── Go build artefacts ───────────────────────────────────────────────────────
+docmind
+docmind.exe
+*.test
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Data & indexes (auto-generated, often large) ─────────────────────────────
+chroma_db/
+bm25_index.pkl
+logs/
+
+# ── Watched documents (user content — never commit) ──────────────────────────
+watched_docs/
+
+# ── Hugging Face model cache ──────────────────────────────────────────────────
+.cache/huggingface/
+
+# ── Editor / OS artefacts ─────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db
+
+# ── Secrets / environment ─────────────────────────────────────────────────────
+.env
+.env.local
+.envrc
+
+# ── Streamlit ─────────────────────────────────────────────────────────────────
+.streamlit/
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
