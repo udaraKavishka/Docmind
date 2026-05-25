@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -13,9 +14,23 @@ import (
 )
 
 const (
-	chromaBase       = "http://localhost:8000/api/v1"
-	collectionName   = "rag_chunks"
+	// ChromaDB v2 API — tenant/database routing replaces the flat v1 namespace.
+	chromaHost     = "http://localhost:8000"
+	chromaTenant   = "default_tenant"
+	chromaDatabase = "default_database"
+	collectionName = "rag_chunks"
 )
+
+// chromaBase is the path prefix for all collection-level endpoints.
+// e.g. chromaBase + "/collections"
+var chromaBase = fmt.Sprintf(
+	"%s/api/v2/tenants/%s/databases/%s",
+	chromaHost, chromaTenant, chromaDatabase,
+)
+
+// collectionID caches the UUID assigned by ChromaDB to the rag_chunks collection.
+// All data operations (upsert, get, delete, query, count) use this UUID — not the name.
+var collectionID string
 
 var client = &http.Client{Timeout: 30 * time.Second}
 
@@ -31,17 +46,35 @@ func post(endpoint string, body any) (*http.Response, error) {
 	return client.Post(chromaBase+endpoint, "application/json", bytes.NewReader(data))
 }
 
+// collPath returns the path to a specific endpoint on the cached collection UUID.
+// e.g. collPath("/upsert") → "/collections/<uuid>/upsert"
+func collPath(op string) string {
+	return "/collections/" + collectionID + op
+}
+
 func ensureCollection() {
 	payload := map[string]any{
-		"name":     collectionName,
-		"metadata": map[string]string{"hnsw:space": "cosine"},
+		"name":           collectionName,
+		"get_or_create":  true,
+		"metadata":       map[string]string{"hnsw:space": "cosine"},
 	}
 	resp, err := post("/collections", payload)
 	if err != nil {
 		log.Printf("[CHROMA] could not create collection: %v", err)
 		return
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil || result.ID == "" {
+		log.Printf("[CHROMA] could not parse collection ID (status %d): %s", resp.StatusCode, body)
+		return
+	}
+	collectionID = result.ID
+	log.Printf("[CHROMA] collection ready: %s (id=%s)", collectionName, collectionID)
 }
 
 type upsertPayload struct {
@@ -113,7 +146,7 @@ func upsertRaw(chunks []chunker.Chunk, withEmbeddings bool) error {
 		payload.Embeddings = embs
 	}
 
-	resp, err := post("/collections/"+collectionName+"/upsert", payload)
+	resp, err := post(collPath("/upsert"), payload)
 	if err != nil {
 		return err
 	}
@@ -128,7 +161,7 @@ func DeleteBySource(sourcePath string) error {
 		"where": map[string]string{"source": sourcePath},
 	}
 	data, _ := json.Marshal(getPayload)
-	resp, err := client.Post(chromaBase+"/collections/"+collectionName+"/get", "application/json", bytes.NewReader(data))
+	resp, err := client.Post(chromaBase+collPath("/get"), "application/json", bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -145,7 +178,7 @@ func DeleteBySource(sourcePath string) error {
 	}
 
 	deletePayload := map[string]any{"ids": getResult.IDs}
-	delResp, err := post("/collections/"+collectionName+"/delete", deletePayload)
+	delResp, err := post(collPath("/delete"), deletePayload)
 	if err != nil {
 		return err
 	}
@@ -157,7 +190,7 @@ func DeleteBySource(sourcePath string) error {
 
 // GetChunkCount returns the total number of chunks in the collection.
 func GetChunkCount() (int, error) {
-	resp, err := client.Get(chromaBase + "/collections/" + collectionName + "/count")
+	resp, err := client.Get(chromaBase + collPath("/count"))
 	if err != nil {
 		return 0, err
 	}
@@ -189,7 +222,7 @@ func Query(embedding []float32, nResults int, where map[string]any) ([]QueryResu
 		payload["where"] = where
 	}
 
-	resp, err := post("/collections/"+collectionName+"/query", payload)
+	resp, err := post(collPath("/query"), payload)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +259,7 @@ func GetByIDs(ids []string) ([]QueryResult, error) {
 		"ids":     ids,
 		"include": []string{"documents", "metadatas"},
 	}
-	resp, err := post("/collections/"+collectionName+"/get", payload)
+	resp, err := post(collPath("/get"), payload)
 	if err != nil {
 		return nil, err
 	}
