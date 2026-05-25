@@ -1,8 +1,12 @@
 """
 Unified retrieval interface — dense + BM25 + RRF fusion + parent lookup (Layer 4).
 """
+from __future__ import annotations
+
 import logging
+from typing import Any, Optional
 import chromadb
+from chromadb import Collection
 from chromadb.config import Settings
 from config import CHROMA_DIR, DENSE_TOP_K
 from retrieval.embedder import embed_text
@@ -11,11 +15,11 @@ from retrieval.fusion import reciprocal_rank_fusion
 
 log = logging.getLogger(__name__)
 
-_client     = None
-_collection = None
+_client: Optional[Any] = None
+_collection: Optional[Collection] = None
 
 
-def _get_collection():
+def _get_collection() -> Collection:
     global _client, _collection
     if _collection is None:
         _client = chromadb.PersistentClient(
@@ -23,13 +27,14 @@ def _get_collection():
             settings=Settings(anonymized_telemetry=False),
         )
         _collection = _client.get_collection('rag_chunks')
+    assert _collection is not None
     return _collection
 
 
 def dense_search(
     query: str,
     top_k: int = DENSE_TOP_K,
-    language: str = None,
+    language: Optional[str] = None,
 ) -> list[tuple[str, str, float]]:
     """
     Vector similarity search in ChromaDB.
@@ -43,7 +48,7 @@ def dense_search(
     if language and language != 'all':
         where['language'] = language
 
-    results = col.query(
+    results: Any = col.query(
         query_embeddings=[q_embed],
         n_results=top_k,
         where=where,
@@ -63,10 +68,11 @@ def fetch_parent(child_id: str, child_text: str) -> dict:
     """
     col = _get_collection()
     try:
-        child_meta = col.get(ids=[child_id], include=['metadatas'])['metadatas'][0]
+        child_result: Any = col.get(ids=[child_id], include=['metadatas'])
+        child_meta = child_result['metadatas'][0]
         parent_id  = child_meta.get('parent_id')
         if parent_id:
-            parent_data = col.get(
+            parent_data: Any = col.get(
                 ids=[f'parent_{parent_id}'],
                 include=['documents', 'metadatas'],
             )
@@ -85,7 +91,7 @@ def fetch_parent(child_id: str, child_text: str) -> dict:
 def retrieve(
     query: str,
     top_n: int = 20,
-    language: str = None,
+    language: Optional[str] = None,
 ) -> list[dict]:
     """
     Full hybrid retrieval pipeline:
