@@ -5,7 +5,13 @@ Lazy-loaded on first use; stays resident in RAM for subsequent queries.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Optional
+
+# Prevent transformers from importing TF/Keras code — we only need PyTorch.
+# Must be set before FlagEmbedding (and therefore transformers) is imported.
+os.environ.setdefault('USE_TF', '0')
+os.environ.setdefault('USE_JAX', '0')
 
 log        = logging.getLogger(__name__)
 MODEL_NAME = 'BAAI/bge-reranker-v2-m3'
@@ -62,7 +68,7 @@ def rerank(
             reverse=True,
         )
 
-    except (ImportError, ModuleNotFoundError, AttributeError) as e:
+    except (ImportError, ModuleNotFoundError, AttributeError, ValueError) as e:
         # FlagEmbedding / torch not installed — degrade gracefully.
         # Fall back to RRF score ordering so the pipeline keeps working.
         log.warning(
