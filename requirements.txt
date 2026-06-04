@@ -28,8 +28,9 @@ rank-bm25>=0.2
 # ── Reranker (requires torch; ~2 GB first install) ───────────────────────────
 torch>=2.1
 FlagEmbedding>=1.2
-# transformers 5.x removed prepare_for_model; FlagEmbedding 1.x requires 4.x
-transformers>=4.40,<5.0
+
+transformers>=4.40,<4.50
+tokenizers>=0.21,<0.22
 
 # ── Agent framework ───────────────────────────────────────────────────────────
 langgraph>=0.2
@@ -38,6 +39,7 @@ langchain-ollama>=0.1
 
 # ── Frontend ─────────────────────────────────────────────────────────────────
 streamlit>=1.35
+starlette>=0.46.0
 
 # ── OCR microservice ─────────────────────────────────────────────────────────
 fastapi>=0.111
